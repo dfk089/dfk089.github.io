@@ -83,10 +83,10 @@ h4 {
 <h4>Daniel Fabian Külzer, kuelzer2@illinois.edu</h4>
 <a href="index.html"> The majority of the population is vaccinated.</a> &rsaquo; <div class="title_div">Vaccine distribution considerably reduced mortality rate.</div> &rsaquo; <a href="covid_spread.html">It was a blessing because COVID-19 spread multiplied over time.</a>
 
-<!-- Create a div where the graph will take place -->
+<!-- graph -->
 <div id="my_dataviz" class="plot_area"></div>
 
-<!-- Add a slider -->
+<!-- slider -->
 <input type="range" name="mySlider" id=mySlider min="0" max="1380" value="520">
 
 <p class="user_interaction">Change the slider to see how the trend continues!</p>
@@ -110,18 +110,17 @@ h4 {
       .attr("transform",
             "translate(" + margin.left + "," + margin.top + ")");
   
-  //Read the data
-  d3.csv("https://raw.githubusercontent.com/dfk089/cs416/main/Data_Project_2.csv",
+  // read the data
+  d3.csv("https://raw.githubusercontent.com/dfk089/dfk089.github.io/main/Data_Project_2.csv",
 
-    // When reading the csv, I must format variables:
+    // format variables
     function(d){
       return { date : d3.timeParse("%Y-%m-%d")(d.date), value : d.overall_mortality_rate, info : d.vaccination_rate }
     },
 
-    // Now I can use this dataset:
     function(data) {
   
-      // Add X axis --> it is a date format
+      // x axis
       var x = d3.scaleTime()
         .domain(d3.extent(data, function(d) { return d.date; }))
         .range([ 0, width ]);
@@ -135,14 +134,14 @@ h4 {
 
     const lastData = data[data.length-1];
 
-      // Add Y axis
+      // y axis
       var y = d3.scaleLinear()
         .domain( [0, 0.068])
         .range([ height, 0 ]);
       svg.append("g")
         .call(d3.axisLeft(y));
   
-      // Add the line
+      // add the line
       svg.append("path")
         .datum(data)
         .attr("fill", "none")
@@ -186,7 +185,7 @@ h4 {
             .style("opacity", 0)
         }
   
-      // Add the points
+      // add the points
       svg
         .append("g")
         .selectAll("dot")
@@ -215,7 +214,7 @@ h4 {
         .attr("y", y(lastData.value) + 25)
         .text(vaccination_rate_last + "%");
 
-	  // Add axis labels
+	  // add axis labels
 	  svg.append("text")
 		.attr("class", "x label")
 		.attr("text-anchor", "end")
@@ -230,7 +229,7 @@ h4 {
 		.attr("transform", "rotate(-90)")
 		.text("Mortality Rate");
 
-    // Date of first vaccination in the US
+    // date of first vaccination in the US
     svg.append("line")
       .attr("x1", 520)
       .attr("y1", 0)
@@ -265,15 +264,14 @@ h4 {
       .attr("transform",
             "translate(" + margin.left + "," + margin.top + ")");
   
-  //Read the data
-  d3.csv("https://raw.githubusercontent.com/dfk089/cs416/main/Data_Project_2.csv",
+  // read the data
+  d3.csv("https://raw.githubusercontent.com/dfk089/dfk089.github.io/main/Data_Project_2.csv",
   
-    // When reading the csv, I must format variables:
+    // format variables
     function(d){
       return { date : d3.timeParse("%Y-%m-%d")(d.date), value : d.overall_mortality_rate, info : d.vaccination_rate }
     },
 
-    // Now I can use this dataset:
     function(data) {
   
       // Add X axis --> it is a date format
@@ -297,7 +295,7 @@ h4 {
 
     const lastData = data[data.length-1];
 
-      // Add the line
+      // add the line
       svg.append("path")
         .datum(data)
         .attr("fill", "none")
@@ -321,7 +319,7 @@ h4 {
         .style("border-radius", "5px")
         .style("padding", "5px")
   
-        // Three function that change the tooltip when user hover / move / leave a cell
+        // tooltip actions
         var mouseover = function(d) {
           Tooltip
             .style("opacity", 1)
@@ -342,7 +340,7 @@ h4 {
             .style("opacity", 0)
         }
   
-      // Add the points
+      // add the points
       svg
         .append("g")
         .selectAll("dot")
@@ -360,7 +358,7 @@ h4 {
           .on("mousemove", mousemove)
           .on("mouseleave", mouseleave)
 
-      // Add axis labels
+      // ddd axis labels
       svg.append("text")
         .attr("class", "x label")
         .attr("text-anchor", "end")
@@ -376,7 +374,7 @@ h4 {
         .text("Mortality Rate");
 
       const vaccination_rate_last = d3.format(",.0f")(100*lastData.info);
-      // Vaccination rate
+      // vaccination rate
       svg.append("text")
         .attr("class", "vaccination_rate")
         .style('fill', 'green')
@@ -386,7 +384,7 @@ h4 {
         .attr("y", y(lastData.value) + 25)
         .text(vaccination_rate_last + "%");
 
-        // Date of first vaccination in the US
+        // date of first vaccination in the US
     svg.append("line")
       .attr("x1", 520)
       .attr("y1", 0)
@@ -405,7 +403,7 @@ h4 {
   })
   }
 
-  // Listen to the slider?
+  // listen to the slider
   d3.select("#mySlider").on("change", function(d){
     selectedValue = this.value
     updateChart(selectedValue)
