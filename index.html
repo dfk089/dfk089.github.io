@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v3.min.js"></script>
+
+<html>
+<head>
+<style>
+a:link, a:visited {
+  background-color: #a7a6ab;
+  color: white;
+  padding: 14px 25px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 20px;
+}
+
+a:hover, a:active {
+  background-color: blue;
+}
+
+div {
+  background-color: #7f7e82;
+  color: white;
+  padding: 14px 25px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 20px;
+}
+
+body {
+  width: 1520px;
+  height: 700px;
+  position: relative;
+}
+
+svg {
+	width: 100%;
+	height: 100%;
+}
+
+path.slice{
+	stroke-width:2px;
+}
+
+polyline{
+	opacity: .3;
+	stroke: black;
+	stroke-width: 2px;
+	fill: none;
+}
+
+button {
+  margin:auto;
+  display:block;
+}
+
+p {
+  text-align: center;
+  width: 1395px;
+  margin-left: 55px;
+  margin-top: -5px;
+}
+
+h4 {
+  margin-top: -20px;
+}
+
+.data_source {
+  margin-top: -55px;
+}
+
+</style>
+</head>
+<body>
+
+<h1>COVID-19 vaccines prevented the worst from happening.</h1>
+<h4>Daniel Fabian Külzer, kuelzer2@illinois.edu</h4>
+<div> The majority of the population is vaccinated.</div> &rsaquo; <a href="mortality_rate.html">Vaccine distribution considerably reduced mortality rate.</a> &rsaquo; <a href="covid_spread.html">It was a blessing because COVID-19 spread multiplied over time.</a>
+<p></p>
+
+<button class="overview">Vaccinated Population</button>
+<button class="details">Details on Doses per Person</button>
+
+<!-- inspired by http://bl.ocks.org/dbuezas/9306799 --> 
+<script>
+
+var svg = d3.select("body")
+	.append("svg")
+	.append("g")
+
+svg.append("g")
+	.attr("class", "slices");
+svg.append("g")
+	.attr("class", "labels");
+svg.append("g")
+	.attr("class", "lines");
+
+var width = 1520,
+    height = 650,
+	radius = Math.min(width, height) / 2;
+
+var pie = d3.layout.pie()
+	.sort(null)
+	.value(function(d) {
+		return d.value;
+	});
+
+var arc = d3.svg.arc()
+	.outerRadius(radius * 0.8)
+	.innerRadius(radius * 0.4);
+
+var outerArc = d3.svg.arc()
+	.innerRadius(radius * 0.9)
+	.outerRadius(radius * 0.9);
+
+svg.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+var key = function(d){ return d.data.label; };
+
+var color = d3.scale.ordinal()
+	.domain(["Vaccinated (78 %)", "Unvaccinated (22 %)", "One dose (11 %)", "Fully vaccinated (45 %)", "Three or more doses (41 %)"])
+	.range(["green", "#7f7e82", "#7b6888", "#6b486b", "#a05d56"]);
+
+function overviewData (){
+	return [{label: "Vaccinated (78 %)", value: 0.78}, {label: "Unvaccinated (22 %)", value: 0.22 }];
+}
+
+function detailsData (){
+	return [{label: "One dose (11 %)", value: 0.11}, {label: "Fully vaccinated (45 %)", value: 0.45 }, {label: "Three or more doses  (41 %)", value: 0.41 }];
+}
+
+change(overviewData());
+
+d3.select(".overview")
+	.on("click", function(){
+		change(overviewData());
+	});
+
+d3.select(".details")
+	.on("click", function(){
+		change(detailsData());
+	});
+
+
+function change(data) {
+
+	/* ------- PIE SLICES -------*/
+	var slice = svg.select(".slices").selectAll("path.slice")
+		.data(pie(data), key);
+
+	slice.enter()
+		.insert("path")
+		.style("fill", function(d) { return color(d.data.label); })
+		.attr("class", "slice");
+
+	slice		
+		.transition().duration(1000)
+		.attrTween("d", function(d) {
+			this._current = this._current || d;
+			var interpolate = d3.interpolate(this._current, d);
+			this._current = interpolate(0);
+			return function(t) {
+				return arc(interpolate(t));
+			};
+		})
+
+	slice.exit()
+		.remove();
+
+	/* ------- TEXT LABELS -------*/
+
+	var text = svg.select(".labels").selectAll("text")
+		.data(pie(data), key);
+
+	text.enter()
+		.append("text")
+		.attr("dy", ".35em")
+		.text(function(d) {
+			return d.data.label;
+		});
+	
+	function midAngle(d){
+		return d.startAngle + (d.endAngle - d.startAngle)/2;
+	}
+
+	text.transition().duration(1000)
+		.attrTween("transform", function(d) {
+			this._current = this._current || d;
+			var interpolate = d3.interpolate(this._current, d);
+			this._current = interpolate(0);
+			return function(t) {
+				var d2 = interpolate(t);
+				var pos = outerArc.centroid(d2);
+				pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
+				return "translate("+ pos +")";
+			};
+		})
+		.styleTween("text-anchor", function(d){
+			this._current = this._current || d;
+			var interpolate = d3.interpolate(this._current, d);
+			this._current = interpolate(0);
+			return function(t) {
+				var d2 = interpolate(t);
+				return midAngle(d2) < Math.PI ? "start":"end";
+			};
+		});
+
+	text.exit()
+		.remove();
+
+	/* ------- SLICE TO TEXT POLYLINES -------*/
+
+	var polyline = svg.select(".lines").selectAll("polyline")
+		.data(pie(data), key);
+	
+	polyline.enter()
+		.append("polyline");
+
+	polyline.transition().duration(1000)
+		.attrTween("points", function(d){
+			this._current = this._current || d;
+			var interpolate = d3.interpolate(this._current, d);
+			this._current = interpolate(0);
+			return function(t) {
+				var d2 = interpolate(t);
+				var pos = outerArc.centroid(d2);
+				pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
+				return [arc.centroid(d2), outerArc.centroid(d2), pos];
+			};			
+		});
+	
+	polyline.exit()
+		.remove();
+};
+
+</script>
+
+<p class="data_source">Data sources: <a style="padding: 4px 25px; font-size: 14px" href="https://github.com/govex/COVID-19">https://github.com/govex/COVID-19</a> <a style="padding: 4px 25px; font-size: 14px" href="https://github.com/CSSEGISandData/COVID-19">https://github.com/CSSEGISandData/COVID-19</a></p>
+
+
+</body>
+</html>

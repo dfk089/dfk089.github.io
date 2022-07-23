@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<html>
+<head>
+<style>
+a:link, a:visited {
+  background-color: #a7a6ab;
+  color: white;
+  padding: 14px 25px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 20px;
+}
+
+a:hover, a:active {
+  background-color: blue;
+}
+
+.plot_area {
+  background-color: white;
+}
+
+.title_div {
+  background-color: #7f7e82;
+  color: white;
+  padding: 14px 25px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 20px;
+}
+
+.myCircle:hover {
+  stroke: blue;
+  fill: blue;
+  r: 5.5;
+}
+
+.tooltip {
+  color: blue;
+  width: 180px;
+  text-align: center;
+}
+
+p {
+  text-align: center;
+  width: 1395px;
+  margin-left: 55px;
+  margin-top: 15px;
+}
+
+h4 {
+  margin-top: -20px;
+}
+
+</style>
+</head>
+<body>
+
+<h1>COVID-19 vaccines prevented the worst from happening.</h1>
+<h4>Daniel Fabian Külzer, kuelzer2@illinois.edu</h4>
+<a href="index.html"> The majority of the population is vaccinated.</a> &rsaquo; <a href="mortality_rate.html">Vaccine distribution considerably reduced mortality rate.</a> &rsaquo; <div class="title_div">It was a blessing because COVID-19 spread multiplied over time.</div>
+
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz" class="plot_area"></div>
+
+<p>Tooltip available for detailed information. Data sources: <a style="padding: 4px 25px; font-size: 14px" href="https://github.com/govex/COVID-19">https://github.com/govex/COVID-19</a> <a style="padding: 4px 25px; font-size: 14px" href="https://github.com/CSSEGISandData/COVID-19">https://github.com/CSSEGISandData/COVID-19</a></p>
+
+<!-- inspired by https://d3-graph-gallery.com/graph/connectedscatter_tooltip.html -->
+<script>
+
+  // set the dimensions and margins of the graph
+  var margin = {top: 10, right: 30, bottom: 30, left: 60},
+      width = 1470 - margin.left - margin.right,
+      height = 650 - margin.top - margin.bottom;
+
+  // append the svg object to the body of the page
+  var svg = d3.select("#my_dataviz")
+    .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+      .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+  
+  // read the data
+  d3.csv("https://raw.githubusercontent.com/dfk089/cs416/main/Data_Project_2.csv",
+
+    // format variables
+    function(d){
+      return { date : d3.timeParse("%Y-%m-%d")(d.date), value : d.cases, info : d.vaccination_rate }
+    },
+
+    function(data) {
+  
+      // x axis
+      var x = d3.scaleTime()
+        .domain(d3.extent(data, function(d) { return d.date; }))
+        .range([ 0, width ]);
+      svg.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x));
+
+      // y axis
+      var y = d3.scaleLinear()
+        .domain( [0, 5700000])
+        .range([ height, 0 ]);
+      svg.append("g")
+        .call(d3.axisLeft(y));
+  
+      // add the line
+      svg.append("path")
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "black")
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+          .curve(d3.curveBasis)
+          .x(function(d) { return x(d.date) })
+          .y(function(d) { return y(d.value) })
+          )
+  
+      // create a tooltip
+      var Tooltip = d3.select("#my_dataviz")
+        .append("div")
+		    .style("position", "absolute")
+        .style("opacity", 0)
+        .attr("class", "tooltip")
+        .style("background-color", "white")
+        .style("border", "solid")
+        .style("border-width", "2px")
+        .style("border-radius", "5px")
+        .style("padding", "5px")
+  
+        // tooltip actions
+        var mouseover = function(d) {
+          Tooltip
+            .style("opacity", 1)
+        }
+        var mousemove = function(d) {
+          const vaccination_rate_temp = d3.format(",.2f")(100*d.info);
+          var parser = d3.timeFormat("%Y-%m-%d");
+          date_temp = parser(d.date);
+          Tooltip
+            .html("Cases per Week: " + d.value + "<br />Vaccination Rate: " + vaccination_rate_temp + "%" + "<br />Date: " + date_temp)
+            .style("left", (d3.mouse(this)[0]+80) + "px")
+            .style("top", (d3.mouse(this)[1]+120) + "px");
+        }
+        var mouseleave = function(d) {
+          Tooltip
+            .style("opacity", 0)
+        }
+  
+      // add the points
+      svg
+        .append("g")
+        .selectAll("dot")
+        .data(data)
+        .enter()
+        .append("circle")
+          .attr("class", "myCircle")
+          .attr("cx", function(d) { return x(d.date) } )
+          .attr("cy", function(d) { return y(d.value) } )
+          .attr("r", 4)
+          .attr("stroke", "##7f7e82")
+          .attr("stroke-width", 3)
+          .attr("fill", "#7f7e82")
+          .on("mouseover", mouseover)
+          .on("mousemove", mousemove)
+          .on("mouseleave", mouseleave)
+
+	  // add axis labels
+	  svg.append("text")
+		.attr("class", "x label")
+		.attr("text-anchor", "end")
+		.attr("x", width)
+		.attr("y", height - 6)
+		.text("Time");
+	  svg.append("text")
+		.attr("class", "y label")
+		.attr("text-anchor", "end")
+		.attr("y", 6)
+		.attr("dy", ".75em")
+		.attr("transform", "rotate(-90)")
+		.text("Cases per Week");
+
+    // date of first vaccination in the US
+    svg.append("line")
+      .attr("x1", 520)
+      .attr("y1", 0)
+      .attr("x2", 520)
+      .attr("y2", height)
+      .style("stroke-width", 2)
+      .style("stroke", "blue")
+      .style("fill", "none");
+    svg.append("text")
+      .attr("class", "info_text")
+      .style('fill', 'blue')
+      .attr("text-anchor", "start")
+      .attr("x", 530)
+      .attr("y", height - 500)
+      .text("First COVID-19 vaccine dose is administered in the US.");
+  })
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<html>
+<head>
+<style>
+a:link, a:visited {
+  background-color: #a7a6ab;
+  color: white;
+  padding: 14px 25px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 20px;
+}
+
+a:hover, a:active {
+  background-color: blue;
+}
+
+.plot_area {
+  background-color: white;
+}
+
+.title_div {
+  background-color: #7f7e82;
+  color: white;
+  padding: 14px 25px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 20px;
+}
+
+.myCircle:hover {
+  stroke: blue;
+  fill: blue;
+  r: 5.5;
+}
+
+.tooltip {
+  color: blue;
+  width: 180px;
+  text-align: center;
+}
+
+#mySlider {
+  width: 1395px;
+  margin-left: 55px;
+}
+
+p {
+  text-align: center;
+  width: 1395px;
+  margin-left: 55px;
+  margin-top: -5px;
+}
+
+.user_interaction {
+  color: red;
+  font-weight: 900;
+  margin-top: 5px;
+  font-size: 18px;
+}
+
+.info {
+  color: green;
+}
+
+h4 {
+  margin-top: -20px;
+}
+
+</style>
+</head>
+<body>
+
+<h1>COVID-19 vaccines prevented the worst from happening.</h1>
+<h4>Daniel Fabian Külzer, kuelzer2@illinois.edu</h4>
+<a href="index.html"> The majority of the population is vaccinated.</a> &rsaquo; <div class="title_div">Vaccine distribution considerably reduced mortality rate.</div> &rsaquo; <a href="covid_spread.html">It was a blessing because COVID-19 spread multiplied over time.</a>
+
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz" class="plot_area"></div>
+
+<!-- Add a slider -->
+<input type="range" name="mySlider" id=mySlider min="0" max="1380" value="520">
+
+<p class="user_interaction">Change the slider to see how the trend continues!</p>
+<p class="info">Vaccination rate (fully vaccinated individuals) is shown in green.</p> 
+<p>Tooltip available for detailed information. Data sources: <a style="padding: 4px 25px; font-size: 14px" href="https://github.com/govex/COVID-19">https://github.com/govex/COVID-19</a> <a style="padding: 4px 25px; font-size: 14px" href="https://github.com/CSSEGISandData/COVID-19">https://github.com/CSSEGISandData/COVID-19</a></p>
+
+<!-- inspired by https://d3-graph-gallery.com/graph/connectedscatter_tooltip.html and https://d3-graph-gallery.com/graph/density_slider.html -->
+<script>
+
+  // set the dimensions and margins of the graph
+  var margin = {top: 10, right: 30, bottom: 30, left: 60},
+      width = 1470 - margin.left - margin.right,
+      height = 650 - margin.top - margin.bottom;
+
+  // append the svg object to the body of the page
+  var svg = d3.select("#my_dataviz")
+    .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+      .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+  
+  //Read the data
+  d3.csv("https://raw.githubusercontent.com/dfk089/cs416/main/Data_Project_2.csv",
+
+    // When reading the csv, I must format variables:
+    function(d){
+      return { date : d3.timeParse("%Y-%m-%d")(d.date), value : d.overall_mortality_rate, info : d.vaccination_rate }
+    },
+
+    // Now I can use this dataset:
+    function(data) {
+  
+      // Add X axis --> it is a date format
+      var x = d3.scaleTime()
+        .domain(d3.extent(data, function(d) { return d.date; }))
+        .range([ 0, width ]);
+      svg.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x));
+  
+    data = data.filter(function(d) {
+		  return x(d.date) <= 520;
+		})
+
+    const lastData = data[data.length-1];
+
+      // Add Y axis
+      var y = d3.scaleLinear()
+        .domain( [0, 0.068])
+        .range([ height, 0 ]);
+      svg.append("g")
+        .call(d3.axisLeft(y));
+  
+      // Add the line
+      svg.append("path")
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "black")
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+          .curve(d3.curveBasis) // Just add that to have a curve instead of segments
+          .x(function(d) { return x(d.date) })
+          .y(function(d) { return y(d.value) })
+          )
+  
+      // create a tooltip
+      var Tooltip = d3.select("#my_dataviz")
+        .append("div")
+		.style("position", "absolute")
+        .style("opacity", 0)
+        .attr("class", "tooltip")
+        .style("background-color", "white")
+        .style("border", "solid")
+        .style("border-width", "2px")
+        .style("border-radius", "5px")
+        .style("padding", "5px")
+  
+        // tooltip actions
+        var mouseover = function(d) {
+          Tooltip
+            .style("opacity", 1)
+        }
+        var mousemove = function(d) {
+		  const val = d3.format(",.2f")(100*d.value);
+		  const vaccination_rate_temp = d3.format(",.2f")(100*d.info);
+		  var parser = d3.timeFormat("%Y-%m-%d");
+		  date_temp = parser(d.date);
+		  Tooltip
+            .html("Mortality Rate: " + val + "%" + "<br />Vaccination Rate: " + vaccination_rate_temp + "%" + "<br />Date: " + date_temp)
+            .style("left", (d3.mouse(this)[0]+80) + "px")
+			.style("top", (d3.mouse(this)[1]+120) + "px");
+        }
+        var mouseleave = function(d) {
+          Tooltip
+            .style("opacity", 0)
+        }
+  
+      // Add the points
+      svg
+        .append("g")
+        .selectAll("dot")
+        .data(data)
+        .enter()
+        .append("circle")
+          .attr("class", "myCircle")
+          .attr("cx", function(d) { return x(d.date) } )
+          .attr("cy", function(d) { return y(d.value) } )
+          .attr("r", 4)
+          .attr("stroke", "##7f7e82")
+          .attr("stroke-width", 3)
+          .attr("fill", "#7f7e82")
+          .on("mouseover", mouseover)
+          .on("mousemove", mousemove)
+          .on("mouseleave", mouseleave)
+		  
+      const vaccination_rate_last = d3.format(",.0f")(100*lastData.info);
+      // Vaccination rate
+      svg.append("text")
+        .attr("class", "vaccination_rate")
+        .style('fill', 'green')
+        .style('font-weight', 900)
+        .attr("text-anchor", "start")
+        .attr("x", x(lastData.date) - 10)
+        .attr("y", y(lastData.value) + 25)
+        .text(vaccination_rate_last + "%");
+
+	  // Add axis labels
+	  svg.append("text")
+		.attr("class", "x label")
+		.attr("text-anchor", "end")
+		.attr("x", width)
+		.attr("y", height - 6)
+		.text("Time");
+	  svg.append("text")
+		.attr("class", "y label")
+		.attr("text-anchor", "end")
+		.attr("y", 6)
+		.attr("dy", ".75em")
+		.attr("transform", "rotate(-90)")
+		.text("Mortality Rate");
+
+    // Date of first vaccination in the US
+    svg.append("line")
+      .attr("x1", 520)
+      .attr("y1", 0)
+      .attr("x2", 520)
+      .attr("y2", height)
+      .style("stroke-width", 2)
+      .style("stroke", "blue")
+      .style("fill", "none");
+    svg.append("text")
+      .attr("class", "info_text")
+      .style('fill', 'blue')
+      .attr("text-anchor", "start")
+      .attr("x", 530)
+      .attr("y", height - 500)
+      .text("First COVID-19 vaccine dose is administered in the US.");
+  })
+
+  function updateChart(date_in) {
+
+    d3.select("svg").remove();
+    // set the dimensions and margins of the graph
+  var margin = {top: 10, right: 30, bottom: 30, left: 60},
+      width = 1470 - margin.left - margin.right,
+      height = 650 - margin.top - margin.bottom;
+  
+  // append the svg object to the body of the page
+  var svg = d3.select("#my_dataviz")
+    .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+      .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+  
+  //Read the data
+  d3.csv("https://raw.githubusercontent.com/dfk089/cs416/main/Data_Project_2.csv",
+  
+    // When reading the csv, I must format variables:
+    function(d){
+      return { date : d3.timeParse("%Y-%m-%d")(d.date), value : d.overall_mortality_rate, info : d.vaccination_rate }
+    },
+
+    // Now I can use this dataset:
+    function(data) {
+  
+      // Add X axis --> it is a date format
+      var x = d3.scaleTime()
+        .domain(d3.extent(data, function(d) { return d.date; }))
+        .range([ 0, width ]);
+      svg.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x));
+  
+      // Add Y axis
+      var y = d3.scaleLinear()
+        .domain( [0, 0.068])
+        .range([ height, 0 ]);
+      svg.append("g")
+        .call(d3.axisLeft(y));
+
+	  data = data.filter(function(d) {
+		  return x(d.date) <= date_in;
+		})
+
+    const lastData = data[data.length-1];
+
+      // Add the line
+      svg.append("path")
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "black")
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+          .curve(d3.curveBasis) // Just add that to have a curve instead of segments
+          .x(function(d) { return x(d.date) })
+          .y(function(d) { return y(d.value) })
+          )
+  
+      // create a tooltip
+      var Tooltip = d3.select("#my_dataviz")
+        .append("div")
+		.style("position", "absolute")
+        .style("opacity", 0)
+        .attr("class", "tooltip")
+        .style("background-color", "white")
+        .style("border", "solid")
+        .style("border-width", "2px")
+        .style("border-radius", "5px")
+        .style("padding", "5px")
+  
+        // Three function that change the tooltip when user hover / move / leave a cell
+        var mouseover = function(d) {
+          Tooltip
+            .style("opacity", 1)
+			.style("color", "blue")
+        }
+        var mousemove = function(d) {
+		  const val = d3.format(",.2f")(100*d.value);
+		  const vaccination_rate_temp = d3.format(",.2f")(100*d.info);
+		  var parser = d3.timeFormat("%Y-%m-%d");
+		  date_temp = parser(d.date);
+		  Tooltip
+            .html("Mortality Rate: " + val + "%" + "<br />Vaccination Rate: " + vaccination_rate_temp + "%" + "<br />Date: " + date_temp)
+            .style("left", (d3.mouse(this)[0]+80) + "px")
+			.style("top", (d3.mouse(this)[1]+120) + "px");
+        }
+        var mouseleave = function(d) {
+          Tooltip
+            .style("opacity", 0)
+        }
+  
+      // Add the points
+      svg
+        .append("g")
+        .selectAll("dot")
+        .data(data)
+        .enter()
+        .append("circle")
+          .attr("class", "myCircle")
+          .attr("cx", function(d) { return x(d.date) } )
+          .attr("cy", function(d) { return y(d.value) } )
+          .attr("r", 3)
+          .attr("stroke", "#7f7e82")
+          .attr("stroke-width", 3)
+          .attr("fill", "#7f7e82")
+          .on("mouseover", mouseover)
+          .on("mousemove", mousemove)
+          .on("mouseleave", mouseleave)
+
+      // Add axis labels
+      svg.append("text")
+        .attr("class", "x label")
+        .attr("text-anchor", "end")
+        .attr("x", width)
+        .attr("y", height - 6)
+        .text("Time");
+      svg.append("text")
+        .attr("class", "y label")
+        .attr("text-anchor", "end")
+        .attr("y", 6)
+        .attr("dy", ".75em")
+        .attr("transform", "rotate(-90)")
+        .text("Mortality Rate");
+
+      const vaccination_rate_last = d3.format(",.0f")(100*lastData.info);
+      // Vaccination rate
+      svg.append("text")
+        .attr("class", "vaccination_rate")
+        .style('fill', 'green')
+        .style('font-weight', 900)
+        .attr("text-anchor", "start")
+        .attr("x", x(lastData.date) - 10)
+        .attr("y", y(lastData.value) + 25)
+        .text(vaccination_rate_last + "%");
+
+        // Date of first vaccination in the US
+    svg.append("line")
+      .attr("x1", 520)
+      .attr("y1", 0)
+      .attr("x2", 520)
+      .attr("y2", height)
+      .style("stroke-width", 2)
+      .style("stroke", "blue")
+      .style("fill", "none");
+    svg.append("text")
+      .attr("class", "info_text")
+      .attr("text-anchor", "start")
+      .style('fill', 'blue')
+      .attr("x", 530)
+      .attr("y", height - 500)
+      .text("First COVID-19 vaccine dose is administered in the US.");
+  })
+  }
+
+  // Listen to the slider?
+  d3.select("#mySlider").on("change", function(d){
+    selectedValue = this.value
+    updateChart(selectedValue)
+  })
+  
+  
+  </script>
+
+</body>
+</html>
